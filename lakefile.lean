@@ -4,6 +4,9 @@ open Lake DSL System
 package scilean
 
 @[default_target]
+lean_lib ZeroD where
+  globs := #[.submodules `ZeroD]
+
 lean_lib SciLean {
   -- precompileModules := true
   roots := #[`SciLean]
