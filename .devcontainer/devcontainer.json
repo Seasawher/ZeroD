@@ -14,7 +14,8 @@
     "vscode" : {
       "extensions" : [
         "leanprover.lean4",
-        "mhutchie.git-graph"
+        "mhutchie.git-graph",
+        "usernamehw.errorlens"
       ]
     }
   }
