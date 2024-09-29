@@ -19,6 +19,21 @@ def stepFunction (x : Float) : Float :=
 def List.arange_length (start stop step : ℚ) : Nat :=
   (stop - start) / step |>.floor.natAbs
 
+open Lean Meta in
+/-- List.arange_length の引数にメタ変数が存在しない場合に simp タクティクで値まで簡約できるようにする
+
+infer_var は標準では norm_num によって簡約を試みるが、
+それだと中途半端なところで計算が止まって具体的な値が取れなかったので、
+具体的な値になるまで簡約できるタクティクが必要だった
+-/
+simproc reduceArangeLength (List.arange_length _ _ _) := fun e => do
+  if e.hasExprMVar then return .done (.mk e none false)
+
+  let reduced ← withTransparency .all $ reduce e
+  let rflCst : Expr := .const ``Eq.refl [1]
+  let eqProof : Expr := mkApp2 rflCst (.const ``Nat []) reduced
+  return .done (.mk reduced eqProof true)
+
 /-- step が 0 のとき、 arange_length の結果は 0 になる -/
 theorem List.arange_length_step_zero_eq_zero (start stop : ℚ)
   : arange_length start stop 0 = 0 := by
@@ -69,6 +84,7 @@ for i in np.arange(3.0, 4.4, 0.1):
 #eval (List.arange 3.0 4.4 0.1).contains 4.3
 #eval (List.arange 3.0 4.4 0.1).getLast? |>.get!
 #eval ((List.arange 3.0 4.4 0.1).getLast? |>.get!) != 4.4
+#eval (List.arange 3.0 4.4 0.1).getLast?.get! = 4.3
 
 #check Float.toString
 
@@ -93,8 +109,18 @@ def SciLean.DataArray.arange (start stop step : ℚ) : DataArray Float :=
   let list := List.arange start stop step
   intro list.get
 
+/-- numpy の np.arange のような関数を DataArrayN に対して実装したもの -/
+def SciLean.DataArrayN.arange
+  (start stop step : ℚ)
+  {len : Nat} (_len_eq : len = List.arange_length start stop step := by infer_var (norm:=simp) (disch:=rfl))
+  : Float^[len] := ⟨DataArray.arange start stop step, sorry_proof⟩
+
 #eval DataArray.arange 3.0 4.4 0.1
 #eval DataArray.arange (-5.0) 5.0 0.1
+
+/-- info: DataArrayN.arange 3.0 4.4 0.1 ⋯ : Float^[14] -/
+#guard_msgs in
+  #check DataArrayN.arange 3.0 4.4 0.1
 
 /- start, stop, step から作るのではなくて、
 start, (個数 : Nat), step で作れば IndexType は誤差がなくなる
