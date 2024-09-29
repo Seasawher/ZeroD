@@ -15,24 +15,44 @@ def stepFunction (x : Float) : Float :=
 
 #check Float.floor
 
+/-- List.arange が返すリストの長さを決定する関数 -/
+def List.arange_length (start stop step : Float) : Nat :=
+  if step = 0 then 0 else
+    let lenF : Float := (stop - start) / step |>.floor
+    lenF.toUInt64.toNat
+
+/-- step が 0 のとき、 arange_length の結果は 0 になる -/
+theorem List.arange_length_step_zero_eq_zero (start stop : Float)
+  : arange_length start stop 0 = 0 := by
+  unfold arange_length
+  split <;> simp_all
+
 /-- numpy の np.arange のような関数を List への関数として実現したもの
 
 停止性の証明を避けるために頑張っている。
 for 文を使うなどしてもいいかも
 -/
 def List.arange (start stop step : Float) : List Float :=
-  let n : Nat := (stop - start) / step |> toNat
+  let n : Nat := arange_length start stop step
   aux n start
   where
-    toNat (f : Float) : Nat :=
-      let f' := f.floor
-      if f'.isFinite then f'.toUInt64.toNat else 0
     aux : Nat → Float → List Float
       | 0, _ => []
       | n + 1, v => v :: aux n (v + step)
 
+/-- List.arange が返すリストの長さは List.arange_length の値と同じになる -/
+theorem List.arange_len_eq (start stop step : Float)
+  : (arange start stop step).length = arange_length start stop step := by
+  unfold arange; simp
+  set len := arange_length start stop step
+  induction len generalizing start stop step
+  case zero => rfl
+  case succ len' ih =>
+    unfold arange.aux; simp
+    rw [ih (stop := start + step)]
+
 #eval 1.0 / 0.0
-#eval 0.0 / 0.0 |> List.arange.toNat
+-- #eval 0.0 / 0.0 |> List.arange.toNat
 #eval List.arange (-5.0) 5.0 0.0
 #eval List.arange (-5.0) 5.0 0.1
 #eval (List.arange (-5.0) 5.0 0.1 |>.head!) = -5.0
