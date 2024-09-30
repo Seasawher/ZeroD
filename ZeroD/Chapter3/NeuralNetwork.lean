@@ -27,7 +27,7 @@ infer_var は標準では norm_num によって簡約を試みるが、
 具体的な値になるまで簡約できるタクティクが必要だった
 -/
 simproc reduceArangeLength (List.arange_length _ _ _) := fun e => do
-  if e.hasExprMVar then return .done (.mk e none false)
+  if e.hasFVar then return .continue
 
   let reduced ← withTransparency .all $ reduce e
   let rflCst : Expr := .const ``Eq.refl [1]
